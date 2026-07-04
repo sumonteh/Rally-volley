@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Rotaciones Vóley — Marcador y Patrones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F131B; --panel:#171E2B; --panel2:#1E2736; --line:#2A3548;
+    --ink:#EDF1F8; --muted:#8C95A8;
+    --ball:#FF7A1A; --court:#3D7BFF;
+    --good:#2FC97C; --bad:#FF5257; --neutral:#667084;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:'Barlow',system-ui,sans-serif; font-size:16px;}
+  button{font-family:inherit;border:none;cursor:pointer;color:inherit;background:none;}
+  .disp{font-family:'Barlow Condensed',sans-serif;}
+
+  .app{max-width:520px;margin:0 auto;padding:0 12px 90px;}
+
+  /* ===== Header marcador ===== */
+  header{padding:14px 4px 10px;display:flex;align-items:center;justify-content:space-between;}
+  header h1{font-family:'Barlow Condensed';font-weight:700;font-size:22px;letter-spacing:.06em;
+    text-transform:uppercase;margin:0;}
+  header h1 span{color:var(--ball);}
+  .set-chip{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+
+  .scoreboard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;}
+  .score-side{text-align:center;}
+  .score-side .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  .score-side .num{font-family:'Barlow Condensed';font-weight:700;font-size:56px;line-height:1;}
+  .score-side.us .num{color:var(--ink);}
+  .score-side.them .num{color:var(--muted);}
+  .serve-dot{width:10px;height:10px;border-radius:50%;background:var(--ball);display:inline-block;
+    margin-left:6px;vertical-align:middle;box-shadow:0 0 8px var(--ball);}
+  .rot-mid{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .rot-mid .r{font-family:'Barlow Condensed';font-weight:700;font-size:26px;color:var(--court);}
+  .rot-mid .t{font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;}
+
+  /* ===== Cancha ===== */
+  .court{margin-top:10px;background:linear-gradient(180deg,#16407e22,#16407e08);
+    border:1px solid #3d7bff44;border-radius:var(--radius);padding:10px 10px 8px;position:relative;}
+  .net{height:3px;background:repeating-linear-gradient(90deg,var(--ink) 0 8px,transparent 8px 14px);
+    opacity:.35;border-radius:2px;margin-bottom:8px;}
+  .court-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .pos{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 4px;
+    text-align:center;transition:transform .35s ease, background .35s;}
+  .pos.rotating{transform:scale(.92);background:#3d7bff2e;}
+  .pos .p{font-size:10px;color:var(--court);letter-spacing:.1em;font-weight:600;}
+  .pos .n{font-family:'Barlow Condensed';font-weight:600;font-size:16px;line-height:1.15;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pos .num{color:var(--ball);font-size:11px;font-weight:600;}
+  .court-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .court-foot .hint{font-size:11px;color:var(--muted);}
+  .mini-btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    padding:6px 10px;font-size:12px;font-weight:600;color:var(--ink);}
+  .mini-btn:active{transform:scale(.96);}
+
+  /* ===== Jugadora activa ===== */
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:10px 2px 2px;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto;background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+    padding:7px 13px;font-size:13px;font-weight:600;color:var(--muted);}
+  .chip.on{background:var(--ball);border-color:var(--ball);color:#141414;}
+
+  /* ===== Botonera de acciones ===== */
+  .skills{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .skill-row{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:9px 10px;}
+  .skill-row .title{font-family:'Barlow Condensed';font-weight:600;font-size:15px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;
+    display:flex;justify-content:space-between;}
+  .skill-row .title b{color:var(--ink);font-weight:600;}
+  .btn3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+  .act{border-radius:10px;padding:13px 4px;font-weight:600;font-size:14px;line-height:1.1;
+    border:1px solid var(--line);background:var(--panel2);}
+  .act:active{transform:scale(.95);}
+  .act.good{background:#2fc97c1f;border-color:#2fc97c66;color:var(--good);}
+  .act.bad{background:#ff52571f;border-color:#ff525766;color:var(--bad);}
+  .act.neu{color:var(--muted);}
+  .act small{display:block;font-size:10px;font-weight:500;opacity:.75;margin-top:2px;}
+
+  .pointrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .pt{border-radius:var(--radius);padding:15px 8px;font-family:'Barlow Condensed';
+    font-weight:700;font-size:19px;letter-spacing:.04em;text-transform:uppercase;}
+  .pt.us{background:var(--court);color:#fff;}
+  .pt.them{background:var(--panel2);border:1px solid var(--line);color:var(--muted);}
+  .pt:active{transform:scale(.97);}
+  .pt small{display:block;font-family:'Barlow';font-size:11px;font-weight:500;
+    text-transform:none;letter-spacing:0;opacity:.8;margin-top:2px;}
+
+  .toolrow{display:flex;gap:8px;margin-top:10px;}
+  .tool{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px;font-size:13px;font-weight:600;color:var(--muted);}
+  .tool:active{transform:scale(.97);}
+  .lastlog{margin-top:10px;font-size:12px;color:var(--muted);min-height:16px;text-align:center;}
+  .lastlog b{color:var(--ink);}
+
+  /* ===== Tabs ===== */
+  nav{position:fixed;left:0;right:0;bottom:0;background:#0f131bf2;backdrop-filter:blur(8px);
+    border-top:1px solid var(--line);display:flex;justify-content:center;gap:4px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:50;}
+  nav button{flex:1;max-width:170px;padding:10px 4px;border-radius:10px;font-family:'Barlow Condensed';
+    font-weight:600;font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  nav button.on{background:var(--panel2);color:var(--ball);}
+
+  .view{display:none;}
+  .view.on{display:block;}
+
+  /* ===== Stats ===== */
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:4px;margin:12px 0;}
+  .seg button{flex:1;padding:8px;border-radius:8px;font-weight:600;font-size:13px;color:var(--muted);}
+  .seg button.on{background:var(--panel2);color:var(--ink);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;margin-bottom:10px;}
+  .card h3{margin:0 0 10px;font-family:'Barlow Condensed';font-weight:600;font-size:17px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  .card h3 b{color:var(--ink);}
+  .rot-list{display:flex;flex-direction:column;gap:8px;}
+  .rot-item{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;}
+  .rot-item.best{border-color:#2fc97c88;}
+  .rot-item.worst{border-color:#ff525766;}
+  .rot-item .rn{font-family:'Barlow Condensed';font-weight:700;font-size:22px;color:var(--court);}
+  .rot-item.best .rn{color:var(--good);}
+  .rot-item.worst .rn{color:var(--bad);}
+  .barwrap{height:8px;background:#0d1119;border-radius:4px;overflow:hidden;}
+  .barfill{height:100%;background:var(--court);border-radius:4px;}
+  .rot-item .meta{font-size:11px;color:var(--muted);margin-top:4px;}
+  .rot-item .pct{font-family:'Barlow Condensed';font-weight:700;font-size:20px;text-align:right;}
+  .tag{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    padding:2px 7px;border-radius:99px;display:inline-block;margin-left:6px;vertical-align:middle;}
+  .tag.best{background:#2fc97c22;color:var(--good);}
+  .tag.worst{background:#ff525722;color:var(--bad);}
+
+  .skillstat{margin-bottom:12px;}
+  .skillstat .top{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px;}
+  .skillstat .top span:last-child{color:var(--muted);font-weight:500;}
+  .stack{display:flex;height:14px;border-radius:7px;overflow:hidden;background:#0d1119;}
+  .stack div{height:100%;}
+  .stack .g{background:var(--good);}
+  .stack .n{background:#66708466;}
+  .stack .b{background:var(--bad);}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:8px;}
+  .legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px;}
+  .focus-box{border:1px dashed #ff7a1a77;background:#ff7a1a12;border-radius:10px;
+    padding:10px 12px;font-size:13px;margin-top:4px;}
+  .focus-box b{color:var(--ball);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;padding:6px 4px;border-bottom:1px solid var(--line);}
+  td{padding:7px 4px;border-bottom:1px solid #1f2938;}
+  td.g{color:var(--good);} td.b{color:var(--bad);} td.mut{color:var(--muted);}
+
+  /* ===== Equipo ===== */
+  .roster-item{display:flex;align-items:center;gap:10px;background:var(--panel2);
+    border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:7px;}
+  .roster-item .jersey{width:34px;height:34px;border-radius:9px;background:#3d7bff22;
+    color:var(--court);display:flex;align-items:center;justify-content:center;
+    font-family:'Barlow Condensed';font-weight:700;font-size:17px;flex:0 0 auto;}
+  .roster-item .nm{flex:1;font-weight:600;}
+  .roster-item .rm{color:var(--bad);font-size:12px;font-weight:600;padding:6px 8px;}
+  .addrow{display:flex;gap:7px;margin:10px 0 4px;}
+  .addrow input{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    color:var(--ink);padding:11px 12px;font-family:inherit;font-size:15px;}
+  .addrow input.numin{width:64px;text-align:center;}
+  .addrow input.namein{flex:1;min-width:0;}
+  .addrow button{background:var(--ball);color:#141414;border-radius:10px;padding:0 16px;
+    font-weight:700;font-size:14px;}
+  .lineup-slot{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;margin-bottom:7px;}
+  .lineup-slot .ps{font-family:'Barlow Condensed';font-weight:700;font-size:18px;color:var(--court);
+    text-align:center;}
+  .lineup-slot select{width:100%;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;color:var(--ink);padding:10px 12px;font-family:inherit;font-size:15px;
+    appearance:none;}
+  .note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px;}
+  .danger{color:var(--bad);border-color:#ff525744;}
+  .primary-tool{background:#3d7bff22;border-color:#3d7bff66;color:var(--court);}
+
+  .set-history{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .set-pill{background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    padding:5px 10px;font-family:'Barlow Condensed';font-weight:600;font-size:15px;}
+  .set-pill.w{border-color:#2fc97c66;color:var(--good);}
+  .set-pill.l{border-color:#ff525744;color:var(--bad);}
+
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:18px 8px;line-height:1.5;}
+
+  /* ===== Fila de 4 opciones (armado) ===== */
+  .btn4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .btn4 .act{padding:12px 2px;font-size:12.5px;}
+  .act.none{color:var(--muted);border-style:dashed;}
+
+  /* ===== Selector de jugador (hoja inferior) ===== */
+  .sheet{position:fixed;inset:0;background:#000000aa;display:none;z-index:100;align-items:flex-end;}
+  .sheet.on{display:flex;}
+  .sheet-panel{background:var(--panel);border-top:1px solid var(--line);
+    border-radius:18px 18px 0 0;width:100%;max-width:520px;margin:0 auto;
+    padding:16px 14px calc(18px + env(safe-area-inset-bottom));}
+  .sheet-panel h4{margin:0 0 12px;font-family:'Barlow Condensed';font-weight:600;font-size:18px;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+  .sheet-panel h4 b{color:var(--ball);}
+  .sheet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:45vh;overflow-y:auto;}
+  .pickp{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+    padding:12px 6px;font-weight:600;font-size:13px;display:flex;flex-direction:column;
+    gap:2px;align-items:center;color:var(--ink);}
+  .pickp:active{transform:scale(.95);}
+  .pickp .disp{color:var(--ball);font-size:18px;font-weight:700;}
+  .pickp.skip{color:var(--muted);}
+  .sheet-cancel{width:100%;margin-top:10px;padding:12px;border-radius:12px;
+    background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-weight:600;}
+
+  /* ===== Filas expandibles por jugadora ===== */
+  .prow{width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;
+    justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--ink);}
+  .prow .st{color:var(--muted);font-weight:500;font-size:12px;}
+  .prow .st b.g{color:var(--good);} .prow .st b.b{color:var(--bad);}
+  .pdetail{background:#0d1119;border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin:-3px 0 10px;font-size:12px;}
+  .pdetail h5{margin:6px 0 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;} }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>ROTA<span>·</span>VÓLEY</h1>
+    <div class="set-chip" id="setChip">Set 1</div>
+  </header>
+
+  <!-- ============ VISTA PARTIDO ============ -->
+  <section class="view on" id="view-match">
+    <div class="scoreboard">
+      <div class="score-side us">
+        <div class="lbl">Nosotros<span class="serve-dot" id="dotUs"></span></div>
+        <div class="num disp" id="scoreUs">0</div>
+      </div>
+      <div class="rot-mid">
+        <div class="t">Rotación</div>
+        <div class="r disp" id="rotLabel">R1</div>
+      </div>
+      <div class="score-side them">
+        <div class="lbl">Rival<span class="serve-dot" id="dotThem" style="display:none"></span></div>
+        <div class="num disp" id="scoreThem">0</div>
+      </div>
+    </div>
+
+    <div class="court">
+      <div class="net"></div>
+      <div class="court-grid" id="courtGrid"></div>
+      <div class="court-foot">
+        <span class="hint">La rotación avanza sola al recuperar el saque</span>
+        <button class="mini-btn" id="btnRotate">↻ Rotar manual</button>
+      </div>
+    </div>
+
+    <div class="skills" style="margin-top:12px">
+      <div class="skill-row">
+        <div class="title"><b>Saque</b><span id="cntSaque"></span></div>
+        <div class="btn3">
+          <button class="act good" data-skill="saque" data-res="good">Ace<small>+1 punto</small></button>
+          <button class="act neu"  data-skill="saque" data-res="neutral">En juego</button>
+          <button class="act bad"  data-skill="saque" data-res="bad">Error<small>punto rival</small></button>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="title"><b>Recepción</b><span id="cntRecepcion"></span></div>
+        <div class="btn3">
+          <button class="act good" data-skill="recepcion" data-res="good">Perfecta</button>
+          <button class="act neu"  data-skill="recepcion" data-res="neutral">Regular</button>
+          <button class="act bad"  data-skill="recepcion" data-res="bad">Error<small>punto rival</small></button>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="title"><b>Ataque</b><span id="cntAtaque"></span></div>
+        <div class="btn3">
+          <button class="act good" data-skill="ataque" data-res="good">Punto<small>+1 punto</small></button>
+          <button class="act neu"  data-skill="ataque" data-res="neutral">Defendido</button>
+          <button class="act bad"  data-skill="ataque" data-res="bad">Error<small>punto rival</small></button>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="title"><b>Bloqueo</b><span id="cntBloqueo"></span></div>
+        <div class="btn3">
+          <button class="act good" data-skill="bloqueo" data-res="good">Punto<small>+1 punto</small></button>
+          <button class="act neu"  data-skill="bloqueo" data-res="neutral">Toque</button>
+          <button class="act bad"  data-skill="bloqueo" data-res="bad">Error<small>punto rival</small></button>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="title"><b>Defensa · Dig</b><span id="cntDefensa"></span></div>
+        <div class="btn3">
+          <button class="act good" data-skill="defensa" data-res="good">Perfecta<small>salvada limpia</small></button>
+          <button class="act neu"  data-skill="defensa" data-res="neutral">Regular</button>
+          <button class="act bad"  data-skill="defensa" data-res="bad">Error<small>punto rival</small></button>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="title"><b>Armado</b><span id="cntArmado"></span></div>
+        <div class="btn4">
+          <button class="act good" data-skill="armado" data-res="good">Perfecto</button>
+          <button class="act neu"  data-skill="armado" data-res="neutral">Normal</button>
+          <button class="act bad"  data-skill="armado" data-res="bad">Malo</button>
+          <button class="act none" data-skill="armado" data-res="none">No hubo</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pointrow">
+      <button class="pt us" id="btnPtUs">Punto nuestro<small>error rival u otra jugada</small></button>
+      <button class="pt them" id="btnPtThem">Punto rival<small>otra jugada</small></button>
+    </div>
+
+    <div class="toolrow">
+      <button class="tool" id="btnUndo">↩ Deshacer</button>
+      <button class="tool primary-tool" id="btnEndSet">Fin de set</button>
+      <button class="tool danger" id="btnEndMatch">Fin de partido</button>
+    </div>
+    <div class="set-history" id="setHistory"></div>
+    <div class="lastlog" id="lastLog"></div>
+  </section>
+
+  <!-- ============ VISTA ESTADÍSTICAS ============ -->
+  <section class="view" id="view-stats">
+    <div class="seg">
+      <button class="on" data-scope="current">Este partido</button>
+      <button data-scope="all">Histórico</button>
+    </div>
+    <div id="statsBody"></div>
+  </section>
+
+  <!-- ============ VISTA EQUIPO ============ -->
+  <section class="view" id="view-team">
+    <div class="card">
+      <h3><b>Plantel</b></h3>
+      <div id="rosterList"></div>
+      <div class="addrow">
+        <input class="numin" id="inNum" type="number" inputmode="numeric" placeholder="Nº">
+        <input class="namein" id="inName" type="text" placeholder="Nombre" maxlength="18">
+        <button id="btnAdd">Añadir</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3><b>Formación inicial</b> (R1)</h3>
+      <div id="lineupSlots"></div>
+      <div class="note">P1 es quien saca. Con cada rotación, quien está en P2 pasa a P1 (giro horario). Las rotaciones R1–R6 de las estadísticas se refieren a esta formación.</div>
+      <div class="toolrow" style="margin-top:12px">
+        <button class="tool primary-tool" id="btnApplyLineup">Aplicar formación al partido</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3><b>Datos</b></h3>
+      <div class="note" id="dataInfo"></div>
+      <div class="toolrow" style="margin-top:10px">
+        <button class="tool primary-tool" id="btnExport">⬇ Exportar respaldo</button>
+        <button class="tool" id="btnImport">⬆ Importar</button>
+      </div>
+      <div class="note">El respaldo es un archivo .json que queda en Descargas (o puedes guardarlo en Archivos/Drive). Para restaurar, usa Importar y elige ese archivo.</div>
+      <input type="file" id="fileImport" accept=".json,application/json" style="display:none">
+      <div class="toolrow" style="margin-top:10px">
+        <button class="tool danger" id="btnWipe">Borrar todo el historial</button>
+      </div>
+    </div>
+  </section>
+
+  <nav>
+    <button class="on" data-view="match">Partido</button>
+    <button data-view="stats">Estadísticas</button>
+    <button data-view="team">Equipo</button>
+  </nav>
+</div>
+
+<!-- Hoja de selección de jugador -->
+<div class="sheet" id="sheet">
+  <div class="sheet-panel">
+    <h4 id="sheetTitle"></h4>
+    <div class="sheet-grid" id="sheetGrid"></div>
+    <button class="sheet-cancel" id="sheetCancel">Cancelar</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= Estado ================= */
+const SKILLS = {
+  saque:     {label:"Saque",     good:"Ace",      neutral:"En juego",  bad:"Error"},
+  recepcion: {label:"Recepción", good:"Perfecta", neutral:"Regular",   bad:"Error"},
+  ataque:    {label:"Ataque",    good:"Punto",    neutral:"Defendido", bad:"Error"},
+  bloqueo:   {label:"Bloqueo",   good:"Punto",    neutral:"Toque",     bad:"Error"},
+  defensa:   {label:"Defensa (dig)", good:"Perfecta", neutral:"Regular", bad:"Error"},
+  armado:    {label:"Armado",    good:"Perfecto", neutral:"Normal",    bad:"Malo", none:"No hubo"},
+};
+const POS_ORDER = [3,2,1,4,5,0]; // índices de posición P4 P3 P2 / P5 P6 P1 en la grilla
+
+let state = {
+  roster: [],          // {id, num, name}
+  lineup: [null,null,null,null,null,null], // ids en P1..P6 para R1
+  match: newMatch(),
+  matches: [],         // partidos terminados
+};
+let activePlayer = null;
+let statScope = "current";
+
+function newMatch(){
+  return {
+    startedAt: Date.now(),
+    score: {us:0, them:0},
+    serving: true,
+    rot: 0,              // 0..5 => R1..R6
+    events: [],          // {skill,res,rot,serving,playerId,dUs,dThem,dRot,dServe}
+    sets: [],            // {us,them}
+  };
+}
+
+/* ================= Persistencia (localStorage del teléfono) ================= */
+const STORE_KEY = "vb:data";
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch(e){ console.error("No se pudo guardar", e); flashLog("⚠ No se pudo guardar en este navegador"); }
+}
+async function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      state = Object.assign(state, d);
+      if(!state.match) state.match = newMatch();
+    }
+  }catch(e){ /* primera vez o datos corruptos: se parte de cero */ }
+}
+
+/* ================= Respaldo: exportar / importar JSON ================= */
+async function exportBackup(){
+  const json = JSON.stringify(state, null, 2);
+  const fecha = new Date().toISOString().slice(0,10);
+  const fileName = `voley-respaldo-${fecha}.json`;
+
+  // Dentro de un iframe con sandbox (ej: vista previa de Claude) las descargas
+  // se bloquean en silencio → usar portapapeles directamente.
+  const enIframe = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
+  if(enIframe){
+    try{
+      await navigator.clipboard.writeText(json);
+      alert("Aquí las descargas están bloqueadas, así que copié el respaldo al portapapeles.\nPégalo en Notas o en un archivo .json.");
+    }catch(e){
+      prompt("Copia este respaldo manualmente:", json);
+    }
+    return;
+  }
+
+  // iPhone/Android: hoja de compartir nativa → guardar en Archivos, Drive, etc.
+  const file = new File([json], fileName, {type:"application/json"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:"Respaldo vóley"}); return; }
+    catch(e){ if(e && e.name==="AbortError") return; /* si falla, sigue a descarga */ }
+  }
+
+  // Escritorio / fallback: descarga clásica
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(file);
+  a.download = fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+function importBackup(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const d = JSON.parse(reader.result);
+      if(!d || !Array.isArray(d.roster) || !Array.isArray(d.matches)) throw new Error("formato");
+      if(!confirm(`El respaldo tiene ${d.matches.length} partido(s) y ${d.roster.length} jugadora(s).\nReemplazará los datos actuales. ¿Continuar?`)) return;
+      state = Object.assign({roster:[],lineup:[null,null,null,null,null,null],match:newMatch(),matches:[]}, d);
+      if(!state.match) state.match = newMatch();
+      activePlayer = null;
+      save(); renderMatch(); renderChips(); renderTeam();
+      flashLog("Respaldo importado ✓");
+    }catch(e){
+      alert("Ese archivo no parece un respaldo válido de la app.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ================= Lógica de rotación / puntos ================= */
+function playersAtRotation(rot){
+  // P(p) en rotación k = lineup[(k+p)%6], p=0..5 (P1..P6)
+  return Array.from({length:6},(_,p)=> state.lineup[(rot+p)%6]);
+}
+function pName(id){ const j=state.roster.find(x=>x.id===id); return j? j.name : "—"; }
+function pNum(id){ const j=state.roster.find(x=>x.id===id); return j? j.num : ""; }
+
+function applyPoint(who){ // who: "us" | "them" — devuelve deltas para undo
+  const m = state.match;
+  const d = {dUs:0,dThem:0,dRot:0,dServe:0};
+  if(who==="us"){
+    m.score.us++; d.dUs=1;
+    if(!m.serving){ m.rot=(m.rot+1)%6; d.dRot=1; m.serving=true; d.dServe=1; animateRotation(); }
+  }else{
+    m.score.them++; d.dThem=1;
+    if(m.serving){ m.serving=false; d.dServe=-1; }
+  }
+  return d;
+}
+
+function logEvent(skill, res, pointEffect, playerId){
+  const m = state.match;
+  const ev = {skill, res, rot:m.rot, serving:m.serving, playerId: playerId||null,
+              ts:Date.now(), dUs:0,dThem:0,dRot:0,dServe:0};
+  if(pointEffect){
+    const d = applyPoint(pointEffect);
+    Object.assign(ev, d);
+  }
+  m.events.push(ev);
+  save(); renderMatch();
+  const who = playerId? ` · ${pName(playerId)}` : "";
+  const s = skill? `${SKILLS[skill].label}: ${SKILLS[skill][res]}` : (pointEffect==="us"?"Punto nuestro":"Punto rival");
+  document.getElementById("lastLog").innerHTML = `Anotado — <b>${s}</b>${who}`;
+}
+
+/* --- Flujo: acción → elegir jugador → registrar --- */
+let pending = null;
+function actionTapped(sk, res){
+  let effect = null;
+  if(sk!=="armado"){
+    if(res==="good" && (sk==="saque"||sk==="ataque"||sk==="bloqueo")) effect="us";
+    if(res==="bad") effect="them";
+  }
+  if(res==="none"){ logEvent(sk,res,null,null); return; }      // "no hubo armado": sin jugador
+  if(!state.roster.length){ logEvent(sk,res,effect,null); return; } // sin plantel: directo
+  pending = {skill:sk, res, effect};
+  openSheet(sk,res);
+}
+function openSheet(sk,res){
+  document.getElementById("sheetTitle").innerHTML =
+    `${SKILLS[sk].label} · <b>${SKILLS[sk][res]}</b> — ¿quién?`;
+  const enCancha = playersAtRotation(state.match.rot).filter(Boolean);
+  const banca = state.roster.filter(j=>!enCancha.includes(j.id));
+  const btn = id=>{ const j=state.roster.find(x=>x.id===id); return j?
+    `<button class="pickp" data-pick="${j.id}"><span class="disp">#${j.num}</span>${escapeHtml(j.name)}</button>`:""; };
+  document.getElementById("sheetGrid").innerHTML =
+    enCancha.map(btn).join("") + banca.map(j=>btn(j.id)).join("") +
+    `<button class="pickp skip" data-pick="">Sin asignar</button>`;
+  document.getElementById("sheet").classList.add("on");
+}
+function closeSheet(){ document.getElementById("sheet").classList.remove("on"); pending=null; }
+
+function undo(){
+  const m = state.match;
+  const ev = m.events.pop();
+  if(!ev){ flashLog("Nada que deshacer"); return; }
+  m.score.us   -= ev.dUs;
+  m.score.them -= ev.dThem;
+  if(ev.dRot)  m.rot = (m.rot+5)%6;
+  if(ev.dServe===1)  m.serving=false;
+  if(ev.dServe===-1) m.serving=true;
+  save(); renderMatch();
+  flashLog("Deshecho ✓");
+}
+function flashLog(t){ document.getElementById("lastLog").innerHTML = t; }
+
+/* ================= Render: partido ================= */
+let rotAnimating=false;
+function animateRotation(){
+  rotAnimating=true;
+  setTimeout(()=>{rotAnimating=false; renderCourt();}, 380);
+}
+function renderMatch(){
+  const m = state.match;
+  document.getElementById("scoreUs").textContent = m.score.us;
+  document.getElementById("scoreThem").textContent = m.score.them;
+  document.getElementById("rotLabel").textContent = "R"+(m.rot+1);
+  document.getElementById("dotUs").style.display   = m.serving? "inline-block":"none";
+  document.getElementById("dotThem").style.display = m.serving? "none":"inline-block";
+  document.getElementById("setChip").textContent = "Set "+(m.sets.length+1);
+  renderCourt();
+  renderSetHistory();
+  renderSkillCounters();
+}
+function renderCourt(){
+  const grid = document.getElementById("courtGrid");
+  const players = playersAtRotation(state.match.rot);
+  grid.innerHTML = POS_ORDER.map(p=>{
+    const id = players[p];
+    return `<div class="pos ${rotAnimating?'rotating':''}">
+      <div class="p">P${p+1}</div>
+      <div class="n">${id? escapeHtml(pName(id)) : "—"}</div>
+      <div class="num">${id? "#"+pNum(id) : ""}</div>
+    </div>`;
+  }).join("");
+}
+function renderSetHistory(){
+  const el = document.getElementById("setHistory");
+  el.innerHTML = state.match.sets.map(s=>
+    `<span class="set-pill ${s.us>s.them?'w':'l'}">${s.us}–${s.them}</span>`).join("");
+}
+function renderSkillCounters(){
+  for(const sk of Object.keys(SKILLS)){
+    const evs = state.match.events.filter(e=>e.skill===sk);
+    const g=evs.filter(e=>e.res==="good").length, b=evs.filter(e=>e.res==="bad"||e.res==="none").length;
+    const el=document.getElementById("cnt"+cap(sk));
+    if(el) el.textContent = evs.length? `+${g} / −${b}` : "";
+  }
+}
+function renderChips(){ /* obsoleto: el jugador se elige tras la acción */ }
+
+/* ================= Sets y partidos ================= */
+function endSet(){
+  const m=state.match;
+  if(m.score.us===0 && m.score.them===0){ flashLog("El set está 0–0"); return; }
+  m.sets.push({us:m.score.us, them:m.score.them});
+  m.score={us:0,them:0};
+  m.serving = confirm("¿Sacamos nosotros el próximo set?\n(Aceptar = sí, Cancelar = saca el rival)");
+  save(); renderMatch();
+  flashLog("Set guardado — marcador reiniciado");
+}
+function endMatch(){
+  const m=state.match;
+  if(m.score.us||m.score.them) m.sets.push({us:m.score.us, them:m.score.them});
+  if(!m.events.length && !m.sets.length){ flashLog("No hay nada que guardar"); return; }
+  if(!confirm("¿Cerrar el partido y guardarlo en el histórico?")) return;
+  m.endedAt=Date.now();
+  state.matches.push(m);
+  state.match=newMatch();
+  save(); renderMatch();
+  flashLog("Partido guardado en el histórico ✓");
+}
+
+/* ================= Estadísticas ================= */
+function allEvents(){
+  const evs=[];
+  if(statScope==="all"){
+    for(const mt of state.matches) evs.push(...mt.events);
+  }
+  evs.push(...state.match.events);
+  return statScope==="current"? state.match.events : evs;
+}
+function rotStats(evs){
+  const R = Array.from({length:6},()=>({won:0,lost:0,soWon:0,soLost:0,errs:0,goods:0}));
+  for(const e of evs){
+    const r=R[e.rot];
+    if(e.dUs){ r.won++; if(!e.serving) r.soWon++; }
+    if(e.dThem){ r.lost++; if(!e.serving) r.soLost++; }
+    if(e.skill){ if(e.res==="bad") r.errs++; if(e.res==="good") r.goods++; }
+  }
+  return R;
+}
+function skillStats(evs){
+  const S={};
+  for(const k of Object.keys(SKILLS)) S[k]={good:0,neutral:0,bad:0,none:0};
+  for(const e of evs) if(e.skill && S[e.skill] && S[e.skill][e.res]!==undefined) S[e.skill][e.res]++;
+  return S;
+}
+function playerStats(evs){
+  const P={};
+  for(const e of evs){
+    if(!e.skill || !e.playerId) continue;
+    const o = P[e.playerId] = P[e.playerId] || {
+      good:0,neutral:0,bad:0,none:0,
+      rot:Array.from({length:6},()=>({good:0,neutral:0,bad:0,none:0})),
+      skills:{}
+    };
+    if(o[e.res]===undefined) continue;
+    o[e.res]++;
+    o.rot[e.rot][e.res]++;
+    const s = o.skills[e.skill] = o.skills[e.skill] || {good:0,neutral:0,bad:0,none:0};
+    s[e.res]++;
+  }
+  return P;
+}
+/* Agrupa eventos en rallies: un rally termina cuando alguien anota */
+function ralliesFrom(evs){
+  const rs=[]; let cur=[];
+  for(const e of evs){
+    cur.push(e);
+    if(e.dUs || e.dThem){ rs.push({events:cur, won: e.dUs>0}); cur=[]; }
+  }
+  if(cur.length) rs.push({events:cur, won:null}); // rally en curso
+  return rs;
+}
+function buildStats(evs){
+  const rs = ralliesFrom(evs);
+  const recRallies = rs.filter(r=> r.events.some(e=>e.skill==="recepcion"));
+  const armCount = {good:0, neutral:0, bad:0, none:0};
+  const armSideout = {good:{w:0,t:0}, neutral:{w:0,t:0}, bad:{w:0,t:0}, none:{w:0,t:0}};
+  let tres=0;
+  for(const r of recRallies){
+    const recOk = r.events.some(e=>e.skill==="recepcion" && (e.res==="good"||e.res==="neutral"));
+    const armEv = [...r.events].reverse().find(e=>e.skill==="armado");
+    const atk   = r.events.some(e=>e.skill==="ataque");
+    const armRes = armEv? armEv.res : null;
+    if(armEv) armCount[armRes]++;
+    if(recOk && armEv && armRes!=="none" && atk) tres++;
+    if(armEv && r.won!==null){ armSideout[armRes].t++; if(r.won) armSideout[armRes].w++; }
+  }
+  return {recRallies: recRallies.length, tres, armCount, armSideout};
+}
+function renderStats(){
+  const evs = allEvents();
+  const body = document.getElementById("statsBody");
+  if(!evs.length){
+    body.innerHTML = `<div class="card"><div class="empty">Todavía no hay jugadas anotadas${statScope==="all"?" en el histórico":""}.<br>Anota acciones en la pestaña <b>Partido</b> y aquí aparecerán los patrones.</div></div>`;
+    return;
+  }
+  const R = rotStats(evs);
+  // mejor/peor rotación por eficiencia de punto (mínimo 3 rallies)
+  const eff = R.map((r,i)=>({i, total:r.won+r.lost, pct: (r.won+r.lost)? r.won/(r.won+r.lost) : null}));
+  const valid = eff.filter(e=>e.total>=3 && e.pct!==null);
+  const best  = valid.length? valid.reduce((a,b)=> b.pct>a.pct? b:a) : null;
+  const worst = valid.length>1? valid.reduce((a,b)=> b.pct<a.pct? b:a) : null;
+
+  let rotHtml = R.map((r,i)=>{
+    const total=r.won+r.lost;
+    const pct = total? Math.round(100*r.won/total) : null;
+    const so  = (r.soWon+r.soLost)? Math.round(100*r.soWon/(r.soWon+r.soLost)) : null;
+    const cls = best&&best.i===i? "best" : (worst&&worst.i===i? "worst":"");
+    const tag = best&&best.i===i? `<span class="tag best">Mejor</span>` : (worst&&worst.i===i? `<span class="tag worst">Reforzar</span>`:"");
+    return `<div class="rot-item ${cls}">
+      <div class="rn disp">R${i+1}</div>
+      <div>
+        <div class="barwrap"><div class="barfill" style="width:${pct??0}%"></div></div>
+        <div class="meta">${r.won}–${r.lost} puntos · Side-out ${so===null?"—":so+"%"} · ${r.errs} errores${tag}</div>
+      </div>
+      <div class="pct disp">${pct===null?"—":pct+"%"}</div>
+    </div>`;
+  }).join("");
+
+  const S = skillStats(evs);
+  let worstSkill=null, worstRate=-1;
+  let skillHtml = Object.entries(S).map(([k,s])=>{
+    const isArm = k==="armado";
+    const t = s.good+s.neutral+s.bad+(isArm? s.none:0);
+    if(!t) return "";
+    const badN = s.bad + (isArm? s.none:0);
+    const rate = badN/t;
+    if(t>=3 && rate>worstRate){ worstRate=rate; worstSkill=k; }
+    const pw = v=> (100*v/t)+"%";
+    const noneSeg = isArm? `<div style="width:${pw(s.none)};background:#3a4356;"></div>` : "";
+    const lblBad = isArm? "malo / sin armado" : "error";
+    return `<div class="skillstat">
+      <div class="top"><span>${SKILLS[k].label}</span><span>${t} acciones · ${Math.round(100*badN/t)}% ${lblBad}</span></div>
+      <div class="stack"><div class="g" style="width:${pw(s.good)}"></div><div class="n" style="width:${pw(s.neutral)}"></div><div class="b" style="width:${pw(s.bad)}"></div>${noneSeg}</div>
+    </div>`;
+  }).join("");
+
+  let focus="";
+  if(worstSkill && worstRate>0){
+    const worstRotTxt = worst? ` La rotación <b>R${worst.i+1}</b> es la que más puntos pierde: revisa quién está al frente en esa formación.` : "";
+    focus = `<div class="focus-box">🎯 <b>Dónde entrenar:</b> el fundamento con mayor tasa de error es <b>${SKILLS[worstSkill].label}</b> (${Math.round(worstRate*100)}%).${worstRotTxt}</div>`;
+  }
+
+  /* --- Construcción de jugada (3 toques y armado) --- */
+  const B = buildStats(evs);
+  let buildHtml = "";
+  if(B.recRallies){
+    const pct3 = Math.round(100*B.tres/B.recRallies);
+    const armT = B.armCount.good+B.armCount.neutral+B.armCount.bad+B.armCount.none;
+    const soRow = (key,label)=>{
+      const d=B.armSideout[key];
+      return d.t? `<tr><td>${label}</td><td class="mut">${B.armCount[key]}</td><td>${Math.round(100*d.w/d.t)}%</td></tr>` :
+        (B.armCount[key]? `<tr><td>${label}</td><td class="mut">${B.armCount[key]}</td><td class="mut">—</td></tr>`:"");
+    };
+    buildHtml = `<div class="card"><h3><b>Construcción de jugada</b></h3>
+      <div class="skillstat">
+        <div class="top"><span>3 toques completos</span><span>${B.tres} de ${B.recRallies} rallies con recepción</span></div>
+        <div class="stack"><div class="g" style="width:${pct3}%"></div></div>
+      </div>
+      ${armT? `<table style="margin-top:8px"><tr><th>Armado</th><th>Veces</th><th>% rally ganado</th></tr>
+        ${soRow("good","Perfecto")}${soRow("neutral","Normal")}${soRow("bad","Malo")}${soRow("none","No hubo")}
+      </table>
+      <div class="note">Si el % de rally ganado con armado perfecto es mucho mayor que con armado malo, ahí está el argumento para entrenar la conexión recepción → armado.</div>`
+      : `<div class="note">Anota el <b>Armado</b> de cada jugada de recepción para ver aquí cuánto influye en ganar el rally.</div>`}
+    </div>`;
+  }
+
+  /* --- Jugadoras (expandible: por rotación y por fundamento) --- */
+  const P = playerStats(evs);
+  const pRows = Object.entries(P).map(([pid,s])=>{
+    const t=s.good+s.neutral+s.bad+s.none;
+    const pos = t? Math.round(100*s.good/t) : 0;
+    const open = expanded.has(pid);
+    let detail = "";
+    if(open){
+      const rotRows = s.rot.map((r,i)=>{
+        const rt=r.good+r.neutral+r.bad+r.none;
+        return rt? `<tr><td>R${i+1}</td><td class="g">+${r.good}</td><td class="mut">${r.neutral}</td><td class="b">−${r.bad+r.none}</td><td>${Math.round(100*r.good/rt)}%</td></tr>`:"";
+      }).join("");
+      const skRows = Object.entries(s.skills).map(([k,v])=>{
+        const vt=v.good+v.neutral+v.bad+v.none;
+        return `<tr><td>${SKILLS[k].label}</td><td class="g">+${v.good}</td><td class="mut">${v.neutral}</td><td class="b">−${v.bad+v.none}</td><td>${Math.round(100*v.good/vt)}%</td></tr>`;
+      }).join("");
+      detail = `<div class="pdetail">
+        <h5>Por rotación</h5><table><tr><th></th><th>+</th><th>=</th><th>−</th><th>Positivas</th></tr>${rotRows||""}</table>
+        <h5>Por fundamento</h5><table><tr><th></th><th>+</th><th>=</th><th>−</th><th>Positivas</th></tr>${skRows}</table>
+      </div>`;
+    }
+    return `<button class="prow" data-exp="${pid}">
+      <span>#${pNum(pid)} ${escapeHtml(pName(pid))}</span>
+      <span class="st"><b class="g">+${s.good}</b> ${s.neutral} <b class="b">−${s.bad+s.none}</b> · ${pos}% ${open?"▴":"▾"}</span>
+    </button>${detail}`;
+  }).join("");
+  const playersHtml = pRows? `<div class="card"><h3><b>Por jugadora</b></h3>${pRows}
+    <div class="note">Toca una jugadora para ver su rendimiento por rotación y por fundamento. Las acciones se asignan al anotar cada jugada.</div></div>` : "";
+
+  body.innerHTML = `
+    <div class="card"><h3><b>Rotaciones</b> · % de puntos ganados</h3>
+      <div class="rot-list">${rotHtml}</div>
+      <div class="note">Side-out = % de veces que recuperamos el saque recibiendo en esa rotación. Se necesitan al menos 3 rallies por rotación para marcar la mejor y la peor.</div>
+    </div>
+    ${buildHtml}
+    <div class="card"><h3><b>Fundamentos</b></h3>
+      ${skillHtml}
+      <div class="legend"><span><i style="background:var(--good)"></i>Positiva</span><span><i style="background:#667084"></i>Neutra</span><span><i style="background:var(--bad)"></i>Error</span><span><i style="background:#3a4356"></i>Sin armado</span></div>
+      ${focus}
+    </div>
+    ${playersHtml}`;
+}
+
+/* ================= Equipo ================= */
+function renderTeam(){
+  const list=document.getElementById("rosterList");
+  list.innerHTML = state.roster.length? state.roster.map(j=>
+    `<div class="roster-item">
+       <div class="jersey disp">${j.num}</div>
+       <div class="nm">${escapeHtml(j.name)}</div>
+       <button class="rm" data-del="${j.id}">Quitar</button>
+     </div>`).join("")
+    : `<div class="empty">Añade a tu equipo para asignarles posiciones y acciones.</div>`;
+
+  const slots=document.getElementById("lineupSlots");
+  slots.innerHTML = Array.from({length:6},(_,p)=>{
+    const opts = `<option value="">— libre —</option>` + state.roster.map(j=>
+      `<option value="${j.id}" ${state.lineup[p]===j.id?"selected":""}>#${j.num} ${escapeHtml(j.name)}</option>`).join("");
+    return `<div class="lineup-slot"><div class="ps disp">P${p+1}</div>
+      <select data-slot="${p}">${opts}</select></div>`;
+  }).join("");
+
+  const nEv = state.matches.reduce((a,m)=>a+m.events.length,0)+state.match.events.length;
+  document.getElementById("dataInfo").textContent =
+    `${state.matches.length} partido(s) en el histórico · ${nEv} acciones registradas. Todo se guarda automáticamente en este dispositivo.`;
+}
+
+/* ================= Utilidades ================= */
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+/* ================= Eventos UI ================= */
+let expanded = new Set();
+
+document.addEventListener("click",(ev)=>{
+  if(ev.target.id==="sheet"){ closeSheet(); return; }
+  const t = ev.target.closest("button, .chip");
+  if(!t) return;
+
+  // Tabs
+  if(t.dataset.view){
+    document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b===t));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));
+    document.getElementById("view-"+t.dataset.view).classList.add("on");
+    if(t.dataset.view==="stats") renderStats();
+    if(t.dataset.view==="team")  renderTeam();
+    return;
+  }
+  // Scope estadísticas
+  if(t.dataset.scope){
+    statScope=t.dataset.scope;
+    document.querySelectorAll(".seg button").forEach(b=>b.classList.toggle("on",b===t));
+    renderStats(); return;
+  }
+  // Ficha de jugadora en la hoja de selección
+  if(t.dataset.pick!==undefined){
+    if(pending){
+      const p = pending; pending = null;
+      document.getElementById("sheet").classList.remove("on");
+      logEvent(p.skill, p.res, p.effect, t.dataset.pick || null);
+    }
+    return;
+  }
+  if(t.id==="sheetCancel"){ closeSheet(); return; }
+  // Expandir detalle por jugadora en estadísticas
+  if(t.dataset.exp){
+    expanded.has(t.dataset.exp)? expanded.delete(t.dataset.exp) : expanded.add(t.dataset.exp);
+    renderStats(); return;
+  }
+  // Acciones de fundamento
+  if(t.dataset.skill){
+    actionTapped(t.dataset.skill, t.dataset.res); return;
+  }
+  // Puntos genéricos
+  if(t.id==="btnPtUs"){ logEvent(null,null,"us",null); return; }
+  if(t.id==="btnPtThem"){ logEvent(null,null,"them",null); return; }
+  if(t.id==="btnUndo"){ undo(); return; }
+  if(t.id==="btnRotate"){ state.match.rot=(state.match.rot+1)%6; animateRotation(); save(); renderMatch(); return; }
+  if(t.id==="btnEndSet"){ endSet(); return; }
+  if(t.id==="btnEndMatch"){ endMatch(); return; }
+
+  // Equipo
+  if(t.id==="btnAdd"){
+    const num=document.getElementById("inNum").value.trim();
+    const name=document.getElementById("inName").value.trim();
+    if(!name){ return; }
+    state.roster.push({id:uid(), num:num||"–", name});
+    document.getElementById("inNum").value=""; document.getElementById("inName").value="";
+    save(); renderTeam(); renderChips(); return;
+  }
+  if(t.dataset.del){
+    state.roster = state.roster.filter(j=>j.id!==t.dataset.del);
+    state.lineup = state.lineup.map(id=> id===t.dataset.del? null:id);
+    if(activePlayer===t.dataset.del) activePlayer=null;
+    save(); renderTeam(); renderChips(); renderCourt(); return;
+  }
+  if(t.id==="btnApplyLineup"){
+    state.match.rot=0; save(); renderMatch();
+    flashLog("Formación aplicada — rotación en R1");
+    document.querySelector('nav button[data-view="match"]').click();
+    return;
+  }
+  if(t.id==="btnExport"){ exportBackup(); return; }
+  if(t.id==="btnImport"){ document.getElementById("fileImport").click(); return; }
+  if(t.id==="btnWipe"){
+    if(confirm("Esto borra el plantel, la formación y TODOS los partidos guardados. ¿Continuar?")){
+      state={roster:[],lineup:[null,null,null,null,null,null],match:newMatch(),matches:[]};
+      activePlayer=null; save(); renderMatch(); renderTeam(); renderChips(); renderStats();
+    }
+    return;
+  }
+});
+
+document.addEventListener("change",(ev)=>{
+  if(ev.target.id==="fileImport"){
+    const f=ev.target.files[0];
+    if(f) importBackup(f);
+    ev.target.value="";
+    return;
+  }
+  const sel=ev.target.closest("select[data-slot]");
+  if(sel){
+    const p=+sel.dataset.slot;
+    const val=sel.value||null;
+    // evitar duplicados: si esa jugadora estaba en otro slot, liberarlo
+    if(val) state.lineup = state.lineup.map((id,i)=> i!==p && id===val? null:id);
+    state.lineup[p]=val;
+    save(); renderTeam(); renderCourt();
+  }
+});
+
+/* ================= Init ================= */
+(async function(){
+  await load();
+  renderMatch(); renderChips(); renderTeam();
+})();
+</script>
+</body>
+</html>
